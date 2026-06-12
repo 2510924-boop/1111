@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>전서구 편지 관리자 📋</title>
+  <!-- Google Fonts: Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght=300;400;500;700&display=swap" rel="stylesheet" />
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Noto Sans KR', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Floating Cloud Animation */
+    @keyframes moveCloud {
+      0% { transform: translateX(-150px); }
+      100% { transform: translateX(calc(100vw + 150px)); }
+    }
+    .cloud {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.4);
+      border-radius: 100px;
+      filter: blur(8px);
+      pointer-events: none;
+      animation: moveCloud linear infinite;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.25);
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-[#87CEEB] to-[#A7D8FF] text-slate-800 min-h-screen py-8 px-4 flex flex-col items-center justify-start overflow-x-hidden relative font-sans">
+  
+  <!-- Back link to classroom billboard -->
+  <div class="fixed top-4 left-4 z-20">
+    <a href="index.html" class="flex items-center gap-2 px-4 py-2.5 bg-white/70 backdrop-blur-[12px] border border-white/60 text-sky-950 font-bold text-xs rounded-full shadow-lg transition-all hover:bg-white active:scale-95 shadow-sky-900/5 select-none">
+      <span>📺</span>
+      <span>교실 전광판 바로가기</span>
+    </a>
+  </div>
+
+  <!-- Clouds drifting behind container -->
+  <div id="cloud-container" class="absolute inset-0 z-0 pointer-events-none overflow-hidden"></div>
+
+  <!-- LOGIN CONTAINER -->
+  <div id="login-container" class="w-full max-w-[380px] bg-white/70 backdrop-blur-[16px] border border-white/50 rounded-[28px] p-6 md:p-8 shadow-2xl relative z-10 my-auto transition-all duration-300">
+    <div class="text-center mb-6">
+      <div class="inline-flex items-center justify-center w-14 h-14 bg-sky-500/10 rounded-2xl border border-sky-300/40 shadow-sm mb-3 text-2xl">
+        🔒
+      </div>
+      <h1 class="text-xl font-bold text-sky-950 tracking-tight leading-snug">선생님 본인 인증</h1>
+      <p class="text-sm text-slate-600 mt-1.5 leading-relaxed">우리반 전서구 편지 게시판 관리를 위한<br />관리자 비밀번호를 입력해 주세요.</p>
+    </div>
+
+    <div class="space-y-4">
+      <!-- Password Input -->
+      <div>
+        <label for="admin-pw-input" class="block text-xs font-bold text-sky-950 mb-1.5 ml-0.5">관리자 비밀번호</label>
+        <input 
+          type="password" 
+          id="admin-pw-input" 
+          placeholder="기본 비밀번호: 1234" 
+          class="w-full bg-white/50 border border-white/60 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-500/10 transition-all text-center tracking-wider font-semibold"
+        />
+        <p id="error-message" class="text-xs text-rose-600 font-bold mt-2 text-center opacity-0 transition-opacity duration-200">비밀번호가 일치하지 않습니다 😅</p>
+      </div>
+
+      <!-- Auth Submit Button -->
+      <div>
+        <button 
+          id="login-btn"
+          class="w-full py-3.5 px-4 rounded-xl text-white font-bold text-sm transition-all focus:outline-none flex items-center justify-center gap-2 select-none shadow-lg bg-gradient-to-r from-sky-500 to-blue-600 hover:opacity-95 active:scale-[0.985]"
+        >
+          <span>입장하기 🔓</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN ADMIN CONSOLE PANEL (Hidden by default) -->
+  <div id="admin-panel" class="w-full max-w-[700px] bg-white/70 backdrop-blur-[16px] border border-white/50 rounded-[28px] p-6 md:p-8 shadow-2xl relative z-10 transition-all duration-300 hidden">
+    
+    <!-- Top Header Title -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-sky-200/60 pb-6 mb-6">
+      <div>
+        <h1 class="text-xl md:text-2xl font-bold text-sky-950 tracking-tight flex items-center gap-2">
+          <span>📋</span> 우리반 전서구 관리자
+        </h1>
+        <p class="text-xs text-slate-600 mt-1 leading-relaxed">학생들이 보낸 실시간 편지를 모니터링하고 공개 여부를 손쉽게 조절합니다.</p>
+      </div>
+      
+      <!-- Statistics Rows -->
+      <div class="flex items-center gap-2 bg-white/65 p-1.5 rounded-2xl border border-sky-100 shrink-0 self-start sm:self-center shadow-inner">
+        <div class="px-3.5 py-1.5 rounded-xl text-center">
+          <div class="text-[10px] font-bold text-slate-500 tracking-wide">누적 편지</div>
+          <div id="stat-total" class="text-sm font-bold text-slate-800 mt-0.5">0</div>
+        </div>
+        <div class="h-6 w-px bg-sky-200"></div>
+        <div class="px-3.5 py-1.5 rounded-xl text-center">
+          <div class="text-[10px] font-bold text-blue-600 tracking-wide">전광판 표시</div>
+          <div id="stat-visible" class="text-sm font-bold text-blue-700 mt-0.5">0</div>
+        </div>
+        <div class="h-6 w-px bg-sky-200"></div>
+        <div class="px-3.5 py-1.5 rounded-xl text-center">
+          <div class="text-[10px] font-bold text-rose-500 tracking-wide">숨김</div>
+          <div id="stat-hidden" class="text-sm font-bold text-rose-700 mt-0.5">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group Action Buttons -->
+    <div class="flex flex-wrap items-center gap-2 mb-6">
+      <button 
+        id="btn-show-all" 
+        class="px-3.5 py-2 bg-sky-500/10 hover:bg-sky-500/20 active:bg-sky-500/25 text-xs text-sky-950 font-bold border border-sky-500/25 rounded-lg transition-all flex items-center gap-1.5"
+      >
+        ✅ 전체 표시
+      </button>
+      <button 
+        id="btn-delete-hidden" 
+        class="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 active:bg-rose-500/25 text-xs text-rose-950 font-bold border border-rose-500/25 rounded-lg transition-all flex items-center gap-1.5"
+      >
+        🗑 숨긴 편지 삭제
+      </button>
+      <button 
+        id="btn-delete-all" 
+        class="px-3.5 py-2 bg-red-600/15 hover:bg-red-600/25 active:bg-red-600/30 text-xs text-red-950 font-bold border border-red-600/30 rounded-lg transition-all ml-auto flex items-center gap-1.5"
+      >
+        ⚠️ 전체 삭제
+      </button>
+    </div>
+
+    <!-- Letter Items Feed Feed -->
+    <div id="letter-list-container" class="space-y-3.5 max-h-[520px] overflow-y-auto pr-1">
+      <!-- Empty fallback view -->
+      <div id="fallback-empty" class="text-center py-12 border border-dashed border-sky-300 rounded-2xl bg-white/20">
+        <span class="text-3xl">🕊️</span>
+        <h3 class="text-sm font-bold text-sky-950 mt-3">아직 도착한 편지가 없어요</h3>
+        <p class="text-xs text-slate-500 mt-1">학생들에게 링크를 나눠 편지를 날려 보내달라고 해보세요.</p>
+      </div>
+      <!-- List row appenders -->
+    </div>
+
+  </div>
+
+  <!-- Firebase Integration via CDN Modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, query, orderByChild, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    // 1. ADMIN PASSPHRASE
+    const ADMIN_PW = '1234';
+
+    // Firebase configurations
+    const firebaseConfig = {
+      apiKey: "AIzaSyCyfVIDGGqqpqO08mJ7dMsCsBYG2DWhd14",
+      authDomain: "letter23-20f00.firebaseapp.com",
+      databaseURL: "https://letter23-20f00-default-rtdb.firebaseio.com",
+      projectId: "letter23-20f00",
+      storageBucket: "letter23-20f00.firebasestorage.app",
+      messagingSenderId: "280106321366",
+      appId: "1:280106321366:web:6f23c4e8913ee683d25077",
+      measurementId: "G-205J0TH5ZG"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // DOM Elements
+    const cloudContainer = document.getElementById('cloud-container');
+    
+    // Auth element
+    const loginContainer = document.getElementById('login-container');
+    const pwInput = document.getElementById('admin-pw-input');
+    const loginBtn = document.getElementById('login-btn');
+    const errMsg = document.getElementById('error-message');
+
+    // Panel element
+    const adminPanel = document.getElementById('admin-panel');
+    const statTotal = document.getElementById('stat-total');
+    const statVisible = document.getElementById('stat-visible');
+    const statHidden = document.getElementById('stat-hidden');
+    const feedContainer = document.getElementById('letter-list-container');
+    const fallbackEmpty = document.getElementById('fallback-empty');
+
+    // Action buttons
+    const btnShowAll = document.getElementById('btn-show-all');
+    const btnDeleteHidden = document.getElementById('btn-delete-hidden');
+    const btnDeleteAll = document.getElementById('btn-delete-all');
+
+    // Letters list state active repository
+    let letterEntries = [];
+
+    // 2. GENERATE DRIFTING BACKGROUND CLOUDS
+    const makeDriftingClouds = () => {
+      cloudContainer.innerHTML = '';
+      for (let i = 0; i < 6; i++) {
+        const cloud = document.createElement('div');
+        cloud.className = 'cloud';
+        
+        const w = Math.random() * 80 + 100;
+        const h = w * 0.45;
+        cloud.style.width = `${w}px`;
+        cloud.style.height = `${h}px`;
+        
+        cloud.style.top = `${Math.random() * 85}%`;
+        cloud.style.left = `-${w + 20}px`;
+        
+        const speed = Math.random() * 30 + 20;
+        cloud.style.animationDuration = `${speed}s`;
+        cloud.style.animationDelay = `${Math.random() * -25}s`;
+        
+        cloudContainer.appendChild(cloud);
+      }
+    };
+    makeDriftingClouds();
+
+    // 3. AUTH LOGON PROCESS
+    const attemptLogin = () => {
+      const input = pwInput.value.trim();
+      if (input === ADMIN_PW) {
+        errMsg.classList.add('opacity-0');
+        
+        loginContainer.classList.add('hidden');
+        adminPanel.classList.remove('hidden');
+        
+        loadLetters();
+      } else {
+        errMsg.classList.remove('opacity-0');
+        pwInput.value = '';
+        pwInput.focus();
+      }
+    };
+
+    loginBtn.addEventListener('click', attemptLogin);
+    pwInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        attemptLogin();
+      }
+    });
+
+    // 4. KOREAN RELATIVE TIMEPASSED UTILITY
+    const timeAgo = (timestamp) => {
+      if (!timestamp) return '방금 전';
+      const diffMs = Date.now() - timestamp;
+      const diffSec = Math.floor(diffMs / 1000);
+      
+      if (diffSec < 60) {
+        return '방금 전';
+      }
+      
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) {
+        return `${diffMin}분 전`;
+      }
+      
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) {
+        return `${diffHr}시간 전`;
+      }
+      
+      const diffDay = Math.floor(diffHr / 24);
+      return `${diffDay}일 전`;
+    };
+
+    const escapeHTML = (text) => {
+      if (!text) return "";
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    };
+
+    // 5. LIVE FIREBASE ENGINE LOAD
+    const loadLetters = () => {
+      const lettersRef = query(ref(db, 'letters'), orderByChild('timestamp'));
+      
+      onValue(lettersRef, (snapshot) => {
+        const data = snapshot.val();
+        letterEntries = [];
+
+        if (data) {
+          Object.keys(data).forEach(key => {
+            letterEntries.push({ key, ...data[key] });
+          });
+        }
+
+        // Sort chronological newest at top of list feed
+        letterEntries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+        updateStatistics();
+        renderListFeed();
+      });
+    };
+
+    // 6. UPDATE STATISTICS COUNTERS
+    const updateStatistics = () => {
+      const total = letterEntries.length;
+      const visible = letterEntries.filter(item => item.visible !== false).length;
+      const hidden = total - visible;
+
+      statTotal.innerText = total;
+      statVisible.innerText = visible;
+      statHidden.innerText = hidden;
+    };
+
+    // 7. RENDER LIST ROWS
+    const renderListFeed = () => {
+      const existingItems = feedContainer.querySelectorAll('.admin-letter-row');
+      existingItems.forEach(item => item.remove());
+
+      if (letterEntries.length === 0) {
+        fallbackEmpty.classList.remove('hidden');
+        return;
+      } else {
+        fallbackEmpty.classList.add('hidden');
+      }
+
+      letterEntries.forEach(item => {
+        const row = document.createElement('div');
+        const isHidden = (item.visible === false);
+        
+        row.className = `admin-letter-row bg-white/50 border border-white/60 rounded-2xl p-4 flex gap-4 transition-all duration-200 relative overflow-hidden ${isHidden ? 'opacity-60 bg-slate-300/30' : 'hover:bg-white/80 hover:shadow-md'}`;
+
+        row.innerHTML = `
+          <!-- Primary Emoji Stamp -->
+          <div class="text-3xl shrink-0 bg-white/60 w-14 h-14 rounded-2xl border border-white/80 flex items-center justify-center self-start shadow-sm">
+            ${item.emoji || '✏️'}
+          </div>
+
+          <!-- Metadata content body -->
+          <div class="flex-1 min-w-0 pr-24">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-sm font-bold text-sky-950">${item.name || '익명'}</span>
+              <span class="text-[10px] text-slate-500 font-medium">${timeAgo(item.timestamp)}</span>
+              ${isHidden ? `<span class="text-[9px] font-bold text-rose-700 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-full ml-1">숨김 처리 완료</span>` : ''}
+            </div>
+            <p class="text-xs text-slate-700 leading-relaxed font-normal whitespace-pre-wrap break-all">${escapeHTML(item.message)}</p>
+          </div>
+
+          <!-- Interactive Actions Panel aligned right -->
+          <div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <!-- Show / Hide toggle key -->
+            <button 
+              data-key="${item.key}" 
+              data-visible="${!isHidden}"
+              class="btn-toggle-ui px-3 py-1.5 text-xs font-bold rounded-xl transition-all focus:outline-none flex items-center justify-center border ` +
+              (isHidden 
+                ? 'bg-sky-500 text-white border-sky-600 hover:bg-sky-600 shadow-sm' 
+                : 'bg-white/70 text-slate-700 border-slate-300 hover:bg-white hover:text-sky-600 hover:border-sky-300'
+              ) + `"
+            >
+              ${isHidden ? '표시' : '숨김'}
+            </button>
+
+            <!-- Permanent Delete key -->
+            <button 
+              data-key="${item.key}" 
+              class="btn-delete-ui px-3 py-1.5 text-xs font-bold rounded-xl transition-all focus:outline-none flex items-center justify-center bg-rose-500/10 text-rose-700 border border-rose-300/40 hover:bg-rose-500 hover:text-white hover:border-rose-500 active:scale-95"
+            >
+              삭제
+            </button>
+          </div>
+        `;
+
+        feedContainer.appendChild(row);
+      });
+
+      addToggleHandlers();
+    };
+
+    const addToggleHandlers = () => {
+      // Toggle display toggler settings
+      document.querySelectorAll('.btn-toggle-ui').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const key = btn.getAttribute('data-key');
+          const currentVisible = btn.getAttribute('data-visible') === 'true';
+
+          try {
+            const letterRef = ref(db, `letters/${key}`);
+            await update(letterRef, { visible: !currentVisible });
+          } catch(err) {
+            console.error("Error setting visibility:", err);
+          }
+        });
+      });
+
+      // Individual item deletion calls
+      document.querySelectorAll('.btn-delete-ui').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const key = btn.getAttribute('data-key');
+          if (confirm("정말로 이 편지를 완전히 영구 삭제할까요?")) {
+            try {
+              const letterRef = ref(db, `letters/${key}`);
+              await remove(letterRef);
+            } catch(err) {
+              console.error("Error deleting item:", err);
+            }
+          }
+        });
+      });
+    };
+
+    // 8. MASS ACTION BUTTON TRIGGERS
+    // ✅ 전체 표시
+    btnShowAll.addEventListener('click', async () => {
+      if (letterEntries.length === 0) return;
+      if (confirm("모든 수신 편지들을 전광판에 '표시' 하도록 전격 전환할까요?")) {
+        try {
+          const promises = letterEntries.map(item => {
+            const letterRef = ref(db, `letters/${item.key}`);
+            return update(letterRef, { visible: true });
+          });
+          await Promise.all(promises);
+        } catch (err) {
+          console.error("Error setting display all:", err);
+        }
+      }
+    });
+
+    // 🗑 숨긴 편지만 삭제
+    btnDeleteHidden.addEventListener('click', async () => {
+      const hiddenItems = letterEntries.filter(item => item.visible === false);
+      if (hiddenItems.length === 0) {
+        alert("현재 숨김 모드로 설정된 편지가 존재하지 않습니다.");
+        return;
+      }
+      
+      if (confirm(`현재 숨겨진 편지 ${hiddenItems.length}개를 일괄 삭제할까요?`)) {
+        try {
+          const promises = hiddenItems.map(item => {
+            const letterRef = ref(db, `letters/${item.key}`);
+            return remove(letterRef);
+          });
+          await Promise.all(promises);
+        } catch (err) {
+          console.error("Error deleting hidden items:", err);
+        }
+      }
+    });
+
+    // ⚠️ 전체 일괄 파쇄 삭제 (Wipes letters node collection)
+    btnDeleteAll.addEventListener('click', async () => {
+      if (letterEntries.length === 0) return;
+      if (confirm("경고! 수신된 편지 데이터 전체를 초기 파쇄합니다. 되돌릴 수 없습니다!")) {
+        try {
+          const lettersRef = ref(db, 'letters');
+          await remove(lettersRef);
+        } catch (err) {
+          console.error("Error wiping database:", err);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
